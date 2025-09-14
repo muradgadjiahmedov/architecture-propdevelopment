@@ -1,0 +1,102 @@
+# non-admin-api-allow.yaml
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}          # все поды в namespace
+  policyTypes:
+  - Ingress
+  - Egress
+  ingress: []              # запретить всё входящее
+  egress: []               # запретить всё исходящее
+---
+# Разрешить front-end -> back-end-api (ingress на back-end-api)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-fe-to-be
+spec:
+  podSelector:
+    matchLabels:
+      role: back-end-api
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: front-end
+    ports:
+    - protocol: TCP
+      port: 80
+---
+# Разрешить back-end-api -> front-end (обратный трафик)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-be-to-fe
+spec:
+  podSelector:
+    matchLabels:
+      role: front-end
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: back-end-api
+    ports:
+    - protocol: TCP
+      port: 80
+---
+# Разрешить admin-front-end -> admin-back-end-api
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-fe-to-admin-be
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-back-end-api
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: admin-front-end
+    ports:
+    - protocol: TCP
+      port: 80
+---
+# Разрешить admin-back-end-api -> admin-front-end (обратный трафик)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-admin-be-to-admin-fe
+spec:
+  podSelector:
+    matchLabels:
+      role: admin-front-end
+  policyTypes: ["Ingress"]
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          role: admin-back-end-api
+    ports:
+    - protocol: TCP
+      port: 80
+---
+# Полная изоляция отдельного сервиса (новый сервис, к которому никто не должен подключаться)
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolate-isolated-app
+spec:
+  podSelector:
+    matchLabels:
+      role: isolated
+  policyTypes: ["Ingress","Egress"]
+  ingress: []     # никто не может подключиться
+  egress: []      # он сам никуда не ходит
